@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> AI - Powered Coding IDE </title>
+    <!-- CodeMirror CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/material-darker.min.css">
+    <link rel="stylesheet" href="compiler.css">
+    <style>
+        :root {
+            --main-bg: #181c24;
+            --main-fg: #fff;
+            --container-bg: #23272f;
+            --output-bg: #15181e;
+            --output-fg: #00e676;
+            --tab-bg: #2d323c;
+            --tab-active-bg: #00b894;
+            --button-bg: #00b894;
+            --button-hover-bg: #00997a;
+            --chatbot-bg: #23272f;
+            --chatbot-header-bg: linear-gradient(90deg, #00b894, #00e676);
+            --chatbot-msg-user-bg: #00b89433;
+            --chatbot-msg-user-fg: #00e676;
+            --chatbot-msg-ai-bg: #23272f;
+            --chatbot-msg-ai-fg: #fff;
+        }
+        [data-theme="light"] {
+            --main-bg: #f7f7f7;
+            --main-fg: #222;
+            --container-bg: #fff;
+            --output-bg: #f3f3f3;
+            --output-fg: #00997a;
+            --tab-bg: #e0e0e0;
+            --tab-active-bg: #00b894;
+            --button-bg: #00b894;
+            --button-hover-bg: #00997a;
+            --chatbot-bg: #fff;
+            --chatbot-header-bg: linear-gradient(90deg, #00b894, #00e676);
+            --chatbot-msg-user-bg: #00b89422;
+            --chatbot-msg-user-fg: #00997a;
+            --chatbot-msg-ai-bg: #f3f3f3;
+            --chatbot-msg-ai-fg: #222;
+        }
+        body {
+            background: var(--main-bg);
+            color: var(--main-fg);
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 0;
+            transition: background 0.3s, color 0.3s;
+        }
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            background: var(--container-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 24px #0008;
+            padding: 32px 24px;
+            transition: background 0.3s;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 24px;
+            font-size: 2.2rem;
+            letter-spacing: 1px;
+        }
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            position: relative;
+        }
+        select, button {
+            font-size: 1rem;
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: none;
+            outline: none;
+        }
+        button {
+            background: var(--button-bg);
+            color: #fff;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: var(--button-hover-bg);
+        }
+        #editor {
+            height: 320px;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 18px;
+        }
+        .output {
+            background: var(--output-bg);
+            border-radius: 8px;
+            min-height: 80px;
+            padding: 16px;
+            font-family: 'Fira Mono', monospace;
+            font-size: 1.1rem;
+            color: var(--output-fg);
+            white-space: pre-wrap;
+            transition: background 0.3s, color 0.3s;
+        }
+        @media (max-width: 600px) {
+            .container { padding: 12px 4px; }
+            h1 { font-size: 1.3rem; }
+        }
+        .ai-chatbot-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 340px;
+            background: var(--chatbot-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 24px #0008;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s, background 0.3s;
+        }
+        .ai-chatbot-container.closed {
+            transform: translateY(90%);
+        }
+        .ai-chatbot-header {
+            background: var(--chatbot-header-bg);
+            color: #fff;
+            padding: 10px 16px;
+            border-radius: 12px 12px 0 0;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        .ai-chatbot-messages {
+            flex: 1;
+            padding: 12px;
+            overflow-y: auto;
+            max-height: 220px;
+            font-size: 1rem;
+            background: var(--main-bg);
+            color: var(--main-fg);
+            transition: background 0.3s, color 0.3s;
+        }
+        .ai-chatbot-input-row {
+            display: flex;
+            border-top: 1px solid #333;
+            padding: 8px;
+            background: var(--chatbot-bg);
+            border-radius: 0 0 12px 12px;
+        }
+        .ai-chatbot-input-row input {
+            flex: 1;
+            padding: 8px 10px;
+            border-radius: 6px;
+            border: none;
+            outline: none;
+            font-size: 1rem;
+            background: var(--output-bg);
+            color: var(--main-fg);
+            transition: background 0.3s, color 0.3s;
+        }
+        .ai-chatbot-input-row button {
+            margin-left: 8px;
+            background: var(--button-bg);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .ai-chatbot-input-row button:hover {
+            background: var (--button-hover-bg);
+        }
+        .ai-msg {
+            margin-bottom: 8px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            max-width: 90%;
+            word-break: break-word;
+        }
+        .ai-msg.user {
+            background: var(--chatbot-msg-user-bg);
+            color: var(--chatbot-msg-user-fg);
+            align-self: flex-end;
+        }
+        .ai-msg.ai {
+            background: var(--chatbot-msg-ai-bg);
+            color: var(--chatbot-msg-ai-fg);
+            align-self: flex-start;
+        }
+        .ide-tools-bar {
+            display: flex;
+            gap: 10px;
+            margin: 12px 0 18px 0;
+            justify-content: center;
+        }
+        .ide-tools-bar button {
+            background: var(--button-bg);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 18px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            box-shadow: 0 2px 8px #00b89444;
+        }
+        .ide-tools-bar button:hover {
+            background: var(--button-hover-bg);
+        }
+        .theme-toggle-bar {
+            position: absolute;
+            top: 18px;
+            right: 32px;
+            z-index: 100;
+        }
+        #themeSwitchBtnTop {
+            background: var(--button-bg);
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 1.3rem;
+            cursor: pointer;
+            box-shadow: 0 2px 8px #00b89444;
+            transition: background 0.2s, color 0.2s;
+        }
+        #themeSwitchBtnTop:hover {
+            background: var(--button-hover-bg);
+            color: #fff;
+        }
+        .multi-file-bar {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0 10px 0;
+            justify-content: flex-end;
+        }
+        .multi-file-bar button {
+            background: var(--button-bg);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 18px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            box-shadow: 0 2px 8px #00b89444;
+        }
+        .self-heal-progress {
+            position: relative;
+            height: 8px;
+            background: #333;
+            border-radius: 4px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        .self-heal-progress-bar {
+            height: 100%;
+            width: 0;
+            background: var(--button-bg);
+            transition: width 0.3s ease;
+        }
+        .sidebar-ide-tools {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-left: 16px;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: var(--container-bg);
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 24px #0008;
+        }
+    </style>
+</head>
+<body>
+    <div class="theme-toggle-bar">
+        <button id="themeSwitchBtnTop" title="Toggle Dark/Light Mode">🌙</button>
+    </div>
+    <div class="container" style="display: flex; flex-direction: column; align-items: stretch;">
+        <h1>⚡ AI Powered Coding IDE</h1>
+        <div class="controls" style="flex-direction: column; align-items: stretch; gap: 12px;">
+            <div class="file-tabs" id="fileTabs"></div>
+            <button id="newFileBtn">New File</button>
+            <button id="deleteFileBtn">Delete File</button>
+            <button id="renameFileBtn">Rename File</button>
+            <select id="language">
+                <option value="javascript">JavaScript</option>
+                <option value="python">Python</option>
+                <option value="html">HTML</option>
+                <option value="css">CSS</option>
+                <option value="typescript">TypeScript</option>
+                <option value="java">Java</option>
+                <option value="php">PHP</option>
+                <option value="ruby">Ruby</option>
+                <option value="go">Go</option>
+                <option value="cpp">C++</option>
+                <option value="c">C</option>
+            </select>
+            <label style="display:flex;align-items:center;gap:4px;margin-right:8px;">
+                <input type="checkbox" id="autoSaveToggle" checked style="accent-color:#00b894;"> Auto Save
+            </label>
+            <button id="runBtn">Run ▶</button>
+            <button id="sidebarMenuBtn" class="sidebar-menu-btn" title="Show More Options">⋮</button>
+            <div class="sidebar-ide-tools" id="sidebarIdeTools" style="display:none;">
+                <button id="suggestCodeBtn">💡 Suggest Code</button>
+                <button id="detectErrorBtn">🛑 Error Detection</button>
+                <button id="autoCompleteBtn">⚡ Auto-complete</button>
+                <button id="bugFixBtn">🛠️ Bug Fix Help</button>
+                <button id="copyOutputBtn">Copy Output</button>
+                <button id="clearOutputBtn">Clear Output</button>
+                <button id="downloadCodeBtn">Download Code</button>
+                <button id="themeSwitchBtn">Switch Theme</button>
+                <button id="downloadOutputBtn">Download Output</button>
+                <button id="printOutputBtn">Print Output</button>
+            </div>
+        </div>
+        <div id="editor"></div>
+        <div class="multi-file-bar">
+            <input type="file" id="multiFileInput" multiple style="display:none;" />
+            <button id="multiFileUploadBtn">Upload Files</button>
+            <button id="multiFileDownloadBtn">Download All</button>
+        </div>
+        <div class="output-resize" id="outputResize"></div>
+        <div class="output" id="output"></div>
+        <div class="self-heal-progress" id="selfHealProgress">
+            <div class="self-heal-progress-bar" id="selfHealProgressBar"></div>
+        </div>
+    </div>
+    <div class="ai-chatbot-container" id="aiChatbotContainer">
+        <div class="ai-chatbot-header">AI Chatbot <span id="aiChatbotToggle">💬</span></div>
+        <div class="ai-chatbot-messages" id="aiChatbotMessages"></div>
+        <div class="ai-chatbot-input-row">
+            <input type="text" id="aiChatbotInput" placeholder="Ask anything about code..." />
+            <button id="aiChatbotSend">Send</button>
+        </div>
+    </div>
+    <!-- CodeMirror JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/python/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/clike/clike.min.js"></script>
+    <!-- Pyodide for Python (WebAssembly) -->
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
+    <script src="compiler.js"></script>
+    <script>
+        // --- Simple AI Chatbot UI/UX ---
+        const aiChatbotContainer = document.getElementById('aiChatbotContainer');
+        const aiChatbotMessages = document.getElementById('aiChatbotMessages');
+        const aiChatbotInput = document.getElementById('aiChatbotInput');
+        const aiChatbotSend = document.getElementById('aiChatbotSend');
+        const aiChatbotToggle = document.getElementById('aiChatbotToggle');
+        let aiChatbotOpen = true;
+        aiChatbotToggle.onclick = () => {
+            aiChatbotOpen = !aiChatbotOpen;
+            aiChatbotContainer.classList.toggle('closed', !aiChatbotOpen);
+        };
+        function addAIMessage(msg, from='ai') {
+            const div = document.createElement('div');
+            div.className = 'ai-msg ' + from;
+            div.textContent = msg;
+            aiChatbotMessages.appendChild(div);
+            aiChatbotMessages.scrollTop = aiChatbotMessages.scrollHeight;
+        }
+        aiChatbotSend.onclick = sendAIMessage;
+        aiChatbotInput.onkeydown = e => { if(e.key==='Enter') sendAIMessage(); };
+        function sendAIMessage() {
+            const userMsg = aiChatbotInput.value.trim();
+            if(!userMsg) return;
+            addAIMessage(userMsg, 'user');
+            aiChatbotInput.value = '';
+            addAIMessage('Thinking...', 'ai');
+            // --- Use OpenAI API or placeholder ---
+            fetch('https://api.mistral.chatz.one/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer demo'
+                },
+                body: JSON.stringify({
+                    model: 'mistral-tiny',
+                    messages: [{role:'user', content: userMsg}],
+                    max_tokens: 80
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                aiChatbotMessages.lastChild.textContent = data.choices?.[0]?.message?.content?.trim() || 'Sorry, no response.';
+            })
+            .catch(() => {
+                aiChatbotMessages.lastChild.textContent = 'AI service unavailable.';
+            });
+        }
+
+        // IDE Tools Bar Logic
+        const suggestCodeBtn = document.getElementById('suggestCodeBtn');
+        const detectErrorBtn = document.getElementById('detectErrorBtn');
+        const autoCompleteBtn = document.getElementById('autoCompleteBtn');
+        const bugFixBtn = document.getElementById('bugFixBtn');
+
+        function getEditorContext() {
+            return editor.getValue();
+        }
+
+        suggestCodeBtn.onclick = async () => {
+            const code = getEditorContext();
+            addAIMessage('Suggest code for:\n' + code, 'user');
+            addAIMessage('Thinking...', 'ai');
+            fetch('https://api.mistral.chatz.one/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer demo'
+                },
+                body: JSON.stringify({
+                    model: 'mistral-tiny',
+                    messages: [{role:'user', content: 'Suggest code for this:\n' + code}],
+                    max_tokens: 120
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                aiChatbotMessages.lastChild.textContent = data.choices?.[0]?.message?.content?.trim() || 'No suggestion.';
+            })
+            .catch(() => {
+                aiChatbotMessages.lastChild.textContent = 'AI service unavailable.';
+            });
+        };
+
+        detectErrorBtn.onclick = async () => {
+            const code = getEditorContext();
+            addAIMessage('Find errors in this code:\n' + code, 'user');
+            addAIMessage('Thinking...', 'ai');
+            fetch('https://api.mistral.chatz.one/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer demo'
+                },
+                body: JSON.stringify({
+                    model: 'mistral-tiny',
+                    messages: [{role:'user', content: 'Find errors and explain in this code:\n' + code}],
+                    max_tokens: 120
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                aiChatbotMessages.lastChild.textContent = data.choices?.[0]?.message?.content?.trim() || 'No errors found.';
+            })
+            .catch(() => {
+                aiChatbotMessages.lastChild.textContent = 'AI service unavailable.';
+            });
+        };
+
+        autoCompleteBtn.onclick = async () => {
+            const code = getEditorContext();
+            addAIMessage('Auto-complete this code:\n' + code, 'user');
+            addAIMessage('Thinking...', 'ai');
+            fetch('https://api.mistral.chatz.one/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer demo'
+                },
+                body: JSON.stringify({
+                    model: 'mistral-tiny',
+                    messages: [{role:'user', content: 'Auto-complete this code:\n' + code}],
+                    max_tokens: 120
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                aiChatbotMessages.lastChild.textContent = data.choices?.[0]?.message?.content?.trim() || 'No completion.';
+            })
+            .catch(() => {
+                aiChatbotMessages.lastChild.textContent = 'AI service unavailable.';
+            });
+        };
+
+        bugFixBtn.onclick = async () => {
+            const code = getEditorContext();
+            addAIMessage('Fix bugs in this code:\n' + code, 'user');
+            addAIMessage('Thinking...', 'ai');
+            fetch('https://api.mistral.chatz.one/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer demo'
+                },
+                body: JSON.stringify({
+                    model: 'mistral-tiny',
+                    messages: [{role:'user', content: 'Fix bugs and explain in this code:\n' + code}],
+                    max_tokens: 120
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                aiChatbotMessages.lastChild.textContent = data.choices?.[0]?.message?.content?.trim() || 'No bug found.';
+            })
+            .catch(() => {
+                aiChatbotMessages.lastChild.textContent = 'AI service unavailable.';
+            });
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Theme toggle logic
+            const themeSwitchBtnTop = document.getElementById('themeSwitchBtnTop');
+            const themeSwitchBtn = document.getElementById('themeSwitchBtn');
+            let theme = localStorage.getItem('ide-theme') || 'dark';
+            function applyTheme() {
+                document.documentElement.setAttribute('data-theme', theme === 'light' ? 'light' : 'dark');
+                if (window.editor) editor.setOption('theme', theme === 'light' ? 'default' : 'material-darker');
+                if (themeSwitchBtn) themeSwitchBtn.textContent = theme === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode';
+                if (themeSwitchBtnTop) themeSwitchBtnTop.textContent = theme === 'light' ? '🌙' : '☀️';
+            }
+            function updateThemeBtnIcon() {
+                const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+                if (themeSwitchBtnTop) themeSwitchBtnTop.textContent = isLight ? '🌙' : '☀️';
+                if (themeSwitchBtn) themeSwitchBtn.textContent = isLight ? '🌙 Dark Mode' : '☀️ Light Mode';
+            }
+            function toggleTheme() {
+                theme = theme === 'light' ? 'dark' : 'light';
+                localStorage.setItem('ide-theme', theme);
+                applyTheme();
+                updateThemeBtnIcon();
+            }
+            if (themeSwitchBtnTop) themeSwitchBtnTop.onclick = toggleTheme;
+            if (themeSwitchBtn) themeSwitchBtn.onclick = toggleTheme;
+            applyTheme();
+            updateThemeBtnIcon();
+        });
+
+        // Multi-file upload/download logic
+        const multiFileInput = document.getElementById('multiFileInput');
+        const multiFileUploadBtn = document.getElementById('multiFileUploadBtn');
+        const multiFileDownloadBtn = document.getElementById('multiFileDownloadBtn');
+
+        multiFileUploadBtn.onclick = () => multiFileInput.click();
+        multiFileInput.onchange = (e) => {
+            const filesArr = Array.from(e.target.files);
+            filesArr.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    // Add each uploaded file as a new tab
+                    files.push({ name: file.name, lang: detectLangFromName(file.name), code: evt.target.result });
+                    activeFile = files.length - 1;
+                    renderTabs();
+                    loadFile();
+                };
+                reader.readAsText(file);
+            });
+        };
+        function detectLangFromName(name) {
+            if (name.endsWith('.js')) return 'javascript';
+            if (name.endsWith('.py')) return 'python';
+            if (name.endsWith('.html')) return 'html';
+            if (name.endsWith('.css')) return 'css';
+            if (name.endsWith('.ts')) return 'typescript';
+            if (name.endsWith('.java')) return 'java';
+            if (name.endsWith('.php')) return 'php';
+            if (name.endsWith('.rb')) return 'ruby';
+            if (name.endsWith('.go')) return 'go';
+            if (name.endsWith('.cpp')) return 'cpp';
+            if (name.endsWith('.c')) return 'c';
+            return 'javascript';
+        }
+        multiFileDownloadBtn.onclick = () => {
+            saveCurrentFile();
+            if (files.length === 1) {
+                // Single file, download as is
+                const file = files[0];
+                const blob = new Blob([file.code], { type: 'text/plain' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = file.name;
+                a.click();
+            } else {
+                // Multiple files, zip them
+                import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js').then(JSZipModule => {
+                    const JSZip = JSZipModule.default || window.JSZip;
+                    const zip = new JSZip();
+                    files.forEach(f => zip.file(f.name, f.code));
+                    zip.generateAsync({ type: 'blob' }).then(blob => {
+                        const a = document.createElement('a');
+                        a.href = URL.createObjectURL(blob);
+                        a.download = 'all-files.zip';
+                        a.click();
+                    });
+                });
+            }
+        };
+    </script>
+</body>
+</html>

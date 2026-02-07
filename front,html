@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Charity Trust</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+        header { background: #4CAF50; color: white; text-align: center; padding: 20px; }
+        .container { width: 80%; margin: auto; text-align: center; padding: 20px; }
+        .donate-btn { background: #ff9800; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; }
+        .section { padding: 20px; background: #f4f4f4; margin: 10px 0; }
+        footer { background: #333; color: white; text-align: center; padding: 10px; position: relative; bottom: 0; width: 100%; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Welcome to Our Charity Trust</h1>
+        <p>Making the world a better place, one step at a time.</p>
+    </header>
+    
+    <div class="container">
+        <h2>Our Mission</h2>
+        <p>We strive to support underprivileged communities through education, healthcare, and social welfare programs.</p>
+        <a href="#donate" class="donate-btn">Donate Now</a>
+    </div>
+    
+    <div class="section">
+        <h2>Upcoming Events</h2>
+        <p>Join our upcoming charity drive on April 15th to support local families in need.</p>
+    </div>
+    
+    <div class="section">
+        <h2>Contact Us</h2>
+        <p>Email: contact@charitytrust.org</p>
+        <p>Phone: +123 456 7890</p>
+    </div>
+    
+    <footer>
+        <p>&copy; 2025 Charity Trust. All Rights Reserved.</p>
+    </footer>
+</body>
+</html>
